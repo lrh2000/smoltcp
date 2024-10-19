@@ -2263,12 +2263,12 @@ impl<'a> Socket<'a> {
         // Check if any state needs to be changed because of a timer.
         if self.timed_out(cx.now()) {
             // If a timeout expires, we should abort the connection.
-            net_debug!("timeout exceeded");
+            log::error!("timeout exceeded");
             self.set_state(State::Closed);
         } else if !self.seq_to_transmit(cx) {
             if let Some(retransmit_delta) = self.timer.should_retransmit(cx.now()) {
                 // If a retransmit timer expired, we should resend data starting at the last ACK.
-                net_debug!("retransmitting at t+{}", retransmit_delta);
+                log::error!("retransmitting at t+{}", retransmit_delta);
 
                 // Rewind "last sequence number sent", as if we never
                 // had sent them. This will cause all data in the queue
@@ -2294,22 +2294,22 @@ impl<'a> Socket<'a> {
         // Decide whether we're sending a packet.
         if self.seq_to_transmit(cx) {
             // If we have data to transmit and it fits into partner's window, do it.
-            tcp_trace!("outgoing segment will send data or flags");
+            log::error!("outgoing segment will send data or flags");
         } else if self.ack_to_transmit() && self.delayed_ack_expired(cx.now()) {
             // If we have data to acknowledge, do it.
-            tcp_trace!("outgoing segment will acknowledge");
+            log::error!("outgoing segment will acknowledge");
         } else if self.window_to_update() {
             // If we have window length increase to advertise, do it.
-            tcp_trace!("outgoing segment will update window");
+            log::error!("outgoing segment will update window");
         } else if self.state == State::Closed {
             // If we need to abort the connection, do it.
-            tcp_trace!("outgoing segment will abort connection");
+            log::error!("outgoing segment will abort connection");
         } else if self.timer.should_keep_alive(cx.now()) {
             // If we need to transmit a keep-alive packet, do it.
-            tcp_trace!("keep-alive timer expired");
+            log::error!("keep-alive timer expired");
         } else if self.timer.should_close(cx.now()) {
             // If we have spent enough time in the TIME-WAIT state, close the socket.
-            tcp_trace!("TIME-WAIT timer expired");
+            log::error!("TIME-WAIT timer expired");
             self.reset();
             return Ok(());
         } else {
@@ -2446,9 +2446,9 @@ impl<'a> Socket<'a> {
 
         // Trace a summary of what will be sent.
         if is_keep_alive {
-            tcp_trace!("sending a keep-alive");
+            log::error!("sending a keep-alive");
         } else if !repr.payload.is_empty() {
-            tcp_trace!(
+            log::error!(
                 "tx buffer: sending {} octets at offset {}",
                 repr.payload.len(),
                 self.remote_last_seq - self.local_seq_no
@@ -2464,7 +2464,7 @@ impl<'a> Socket<'a> {
                 (TcpControl::None, Some(_)) => "ACK",
                 _ => "<unreachable>",
             };
-            tcp_trace!("sending {}", flags);
+            log::error!("sending {}", flags);
         }
 
         if repr.control == TcpControl::Syn {
@@ -2491,10 +2491,10 @@ impl<'a> Socket<'a> {
         match self.ack_delay_timer {
             AckDelayTimer::Idle => {}
             AckDelayTimer::Waiting(_) => {
-                tcp_trace!("stop delayed ack timer")
+                log::error!("stop delayed ack timer")
             }
             AckDelayTimer::Immediate => {
-                tcp_trace!("stop delayed ack timer (was force-expired)")
+                log::error!("stop delayed ack timer (was force-expired)")
             }
         }
         self.ack_delay_timer = AckDelayTimer::Idle;
