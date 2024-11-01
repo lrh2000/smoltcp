@@ -1,0 +1,1504 @@
+From c69a2bfa9f0b9869c525343da892bce5fbe0971d Mon Sep 17 00:00:00 2001
+From: Ruihan Li <lrh2000@pku.edu.cn>
+Date: Thu, 19 Sep 2024 16:19:09 +0800
+Subject: [PATCH 1/4] Replace all `pub(crate)` with `pub`
+
+This commit is generated from the following command:
+
+	find . -name "*.rs" | xargs sed -i 's|pub(crate)|pub|g'
+---
+ src/iface/fragmentation.rs       | 40 ++++++++++++++++----------------
+ src/iface/interface/ipv4.rs      |  4 ++--
+ src/iface/interface/ipv6.rs      |  2 +-
+ src/iface/interface/mod.rs       | 20 ++++++++--------
+ src/iface/interface/multicast.rs | 10 ++++----
+ src/iface/interface/sixlowpan.rs |  2 +-
+ src/iface/interface/tcp.rs       |  2 +-
+ src/iface/neighbor.rs            | 14 +++++------
+ src/iface/packet.rs              | 36 ++++++++++++++--------------
+ src/iface/route.rs               |  2 +-
+ src/iface/rpl/of0.rs             |  2 +-
+ src/iface/rpl/parents.rs         | 16 ++++++-------
+ src/iface/rpl/trickle.rs         | 22 +++++++++---------
+ src/iface/socket_meta.rs         | 12 +++++-----
+ src/iface/socket_set.rs          | 10 ++++----
+ src/phy/loopback.rs              |  2 +-
+ src/rand.rs                      | 10 ++++----
+ src/socket/dhcpv4.rs             | 12 +++++-----
+ src/socket/dns.rs                |  8 +++----
+ src/socket/icmp.rs               | 12 +++++-----
+ src/socket/mod.rs                |  6 ++---
+ src/socket/raw.rs                |  8 +++----
+ src/socket/tcp.rs                | 12 +++++-----
+ src/socket/udp.rs                |  8 +++----
+ src/storage/packet_buffer.rs     |  2 +-
+ src/tests.rs                     |  4 ++--
+ src/wire/dhcpv4.rs               |  2 +-
+ src/wire/ip.rs                   |  4 ++--
+ src/wire/ipv4.rs                 | 12 +++++-----
+ src/wire/ipv6.rs                 | 16 ++++++-------
+ src/wire/mod.rs                  | 18 +++++++-------
+ src/wire/sixlowpan/frag.rs       |  8 +++----
+ src/wire/sixlowpan/nhc.rs        |  4 ++--
+ src/wire/udp.rs                  |  2 +-
+ 34 files changed, 172 insertions(+), 172 deletions(-)
+
+diff --git a/src/iface/fragmentation.rs b/src/iface/fragmentation.rs
+index ed00f17..66ec57c 100644
+--- a/src/iface/fragmentation.rs
++++ b/src/iface/fragmentation.rs
+@@ -76,7 +76,7 @@ impl<K> PacketAssembler<K> {
+         }
+     }
+ 
+-    pub(crate) fn reset(&mut self) {
++    pub fn reset(&mut self) {
+         self.key = None;
+         self.assembler.clear();
+         self.total_size = None;
+@@ -84,7 +84,7 @@ impl<K> PacketAssembler<K> {
+     }
+ 
+     /// Set the total size of the packet assembler.
+-    pub(crate) fn set_total_size(&mut self, size: usize) -> Result<(), AssemblerError> {
++    pub fn set_total_size(&mut self, size: usize) -> Result<(), AssemblerError> {
+         if let Some(old_size) = self.total_size {
+             if old_size != size {
+                 return Err(AssemblerError);
+@@ -106,11 +106,11 @@ impl<K> PacketAssembler<K> {
+     }
+ 
+     /// Return the instant when the assembler expires.
+-    pub(crate) fn expires_at(&self) -> Instant {
++    pub fn expires_at(&self) -> Instant {
+         self.expires_at
+     }
+ 
+-    pub(crate) fn add_with(
++    pub fn add_with(
+         &mut self,
+         offset: usize,
+         f: impl Fn(&mut [u8]) -> Result<usize, AssemblerError>,
+@@ -138,7 +138,7 @@ impl<K> PacketAssembler<K> {
+     ///
+     /// - Returns [`Error::PacketAssemblerBufferTooSmall`] when trying to add data into the buffer at a non-existing
+     /// place.
+-    pub(crate) fn add(&mut self, data: &[u8], offset: usize) -> Result<(), AssemblerError> {
++    pub fn add(&mut self, data: &[u8], offset: usize) -> Result<(), AssemblerError> {
+         #[cfg(not(feature = "alloc"))]
+         if self.buffer.len() < offset + data.len() {
+             return Err(AssemblerError);
+@@ -164,7 +164,7 @@ impl<K> PacketAssembler<K> {
+ 
+     /// Get an immutable slice of the underlying packet data, if reassembly complete.
+     /// This will mark the assembler as empty, so that it can be reused.
+-    pub(crate) fn assemble(&mut self) -> Option<&'_ [u8]> {
++    pub fn assemble(&mut self) -> Option<&'_ [u8]> {
+         if !self.is_complete() {
+             return None;
+         }
+@@ -176,7 +176,7 @@ impl<K> PacketAssembler<K> {
+     }
+ 
+     /// Returns `true` when all fragments have been received, otherwise `false`.
+-    pub(crate) fn is_complete(&self) -> bool {
++    pub fn is_complete(&self) -> bool {
+         self.total_size == Some(self.assembler.peek_front())
+     }
+ 
+@@ -207,7 +207,7 @@ impl<K: Eq + Copy> PacketAssemblerSet<K> {
+     /// If it doesn't exist, it is created, with the `expires_at` timestamp.
+     ///
+     /// If the assembler set is full, in which case an error is returned.
+-    pub(crate) fn get(
++    pub fn get(
+         &mut self,
+         key: &K,
+         expires_at: Instant,
+@@ -240,19 +240,19 @@ impl<K: Eq + Copy> PacketAssemblerSet<K> {
+ 
+ // Max len of non-fragmented packets after decompression (including ipv6 header and payload)
+ // TODO: lower. Should be (6lowpan mtu) - (min 6lowpan header size) + (max ipv6 header size)
+-pub(crate) const MAX_DECOMPRESSED_LEN: usize = 1500;
++pub const MAX_DECOMPRESSED_LEN: usize = 1500;
+ 
+ #[cfg(feature = "_proto-fragmentation")]
+ #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) enum FragKey {
++pub enum FragKey {
+     #[cfg(feature = "proto-ipv4-fragmentation")]
+     Ipv4(Ipv4FragKey),
+     #[cfg(feature = "proto-sixlowpan-fragmentation")]
+     Sixlowpan(SixlowpanFragKey),
+ }
+ 
+-pub(crate) struct FragmentsBuffer {
++pub struct FragmentsBuffer {
+     #[cfg(feature = "proto-sixlowpan")]
+     pub decompress_buf: [u8; MAX_DECOMPRESSED_LEN],
+ 
+@@ -264,17 +264,17 @@ pub(crate) struct FragmentsBuffer {
+ }
+ 
+ #[cfg(not(feature = "_proto-fragmentation"))]
+-pub(crate) struct Fragmenter {}
++pub struct Fragmenter {}
+ 
+ #[cfg(not(feature = "_proto-fragmentation"))]
+ impl Fragmenter {
+-    pub(crate) fn new() -> Self {
++    pub fn new() -> Self {
+         Self {}
+     }
+ }
+ 
+ #[cfg(feature = "_proto-fragmentation")]
+-pub(crate) struct Fragmenter {
++pub struct Fragmenter {
+     /// The buffer that holds the unfragmented 6LoWPAN packet.
+     pub buffer: [u8; FRAGMENTATION_BUFFER_SIZE],
+     /// The size of the packet without the IEEE802.15.4 header and the fragmentation headers.
+@@ -289,7 +289,7 @@ pub(crate) struct Fragmenter {
+ }
+ 
+ #[cfg(feature = "proto-ipv4-fragmentation")]
+-pub(crate) struct Ipv4Fragmenter {
++pub struct Ipv4Fragmenter {
+     /// The IPv4 representation.
+     pub repr: Ipv4Repr,
+     /// The destination hardware address.
+@@ -302,7 +302,7 @@ pub(crate) struct Ipv4Fragmenter {
+ }
+ 
+ #[cfg(feature = "proto-sixlowpan-fragmentation")]
+-pub(crate) struct SixlowpanFragmenter {
++pub struct SixlowpanFragmenter {
+     /// The datagram size that is used for the fragmentation headers.
+     pub datagram_size: u16,
+     /// The datagram tag that is used for the fragmentation headers.
+@@ -320,7 +320,7 @@ pub(crate) struct SixlowpanFragmenter {
+ 
+ #[cfg(feature = "_proto-fragmentation")]
+ impl Fragmenter {
+-    pub(crate) fn new() -> Self {
++    pub fn new() -> Self {
+         Self {
+             buffer: [0u8; FRAGMENTATION_BUFFER_SIZE],
+             packet_len: 0,
+@@ -355,18 +355,18 @@ impl Fragmenter {
+ 
+     /// Return `true` when everything is transmitted.
+     #[inline]
+-    pub(crate) fn finished(&self) -> bool {
++    pub fn finished(&self) -> bool {
+         self.packet_len == self.sent_bytes
+     }
+ 
+     /// Returns `true` when there is nothing to transmit.
+     #[inline]
+-    pub(crate) fn is_empty(&self) -> bool {
++    pub fn is_empty(&self) -> bool {
+         self.packet_len == 0
+     }
+ 
+     // Reset the buffer.
+-    pub(crate) fn reset(&mut self) {
++    pub fn reset(&mut self) {
+         self.packet_len = 0;
+         self.sent_bytes = 0;
+ 
+diff --git a/src/iface/interface/ipv4.rs b/src/iface/interface/ipv4.rs
+index ef57665..f5d601d 100644
+--- a/src/iface/interface/ipv4.rs
++++ b/src/iface/interface/ipv4.rs
+@@ -46,7 +46,7 @@ impl InterfaceInner {
+     /// **NOTE**: unlike for IPv6, no specific selection algorithm is implemented. The first IPv4
+     /// address from the interface is returned.
+     #[allow(unused)]
+-    pub(crate) fn get_source_address_ipv4(&self, _dst_addr: &Ipv4Address) -> Option<Ipv4Address> {
++    pub fn get_source_address_ipv4(&self, _dst_addr: &Ipv4Address) -> Option<Ipv4Address> {
+         for cidr in self.ip_addrs.iter() {
+             #[allow(irrefutable_let_patterns)] // if only ipv4 is enabled
+             if let IpCidr::Ipv4(cidr) = cidr {
+@@ -58,7 +58,7 @@ impl InterfaceInner {
+ 
+     /// Checks if an address is broadcast, taking into account ipv4 subnet-local
+     /// broadcast addresses.
+-    pub(crate) fn is_broadcast_v4(&self, address: Ipv4Address) -> bool {
++    pub fn is_broadcast_v4(&self, address: Ipv4Address) -> bool {
+         if address.is_broadcast() {
+             return true;
+         }
+diff --git a/src/iface/interface/ipv6.rs b/src/iface/interface/ipv6.rs
+index a8d29e4..af7b4e3 100644
+--- a/src/iface/interface/ipv6.rs
++++ b/src/iface/interface/ipv6.rs
+@@ -25,7 +25,7 @@ impl InterfaceInner {
+     /// # Panics
+     /// This function panics if the destination address is unspecified.
+     #[allow(unused)]
+-    pub(crate) fn get_source_address_ipv6(&self, dst_addr: &Ipv6Address) -> Ipv6Address {
++    pub fn get_source_address_ipv6(&self, dst_addr: &Ipv6Address) -> Ipv6Address {
+         assert!(!dst_addr.is_unspecified());
+ 
+         // See RFC 6724 Section 4: Candidate source address
+diff --git a/src/iface/interface/mod.rs b/src/iface/interface/mod.rs
+index c850d3c..5962ba9 100644
+--- a/src/iface/interface/mod.rs
++++ b/src/iface/interface/mod.rs
+@@ -18,7 +18,7 @@ mod ipv6;
+ mod sixlowpan;
+ 
+ #[cfg(feature = "multicast")]
+-pub(crate) mod multicast;
++pub mod multicast;
+ #[cfg(feature = "socket-tcp")]
+ mod tcp;
+ #[cfg(any(feature = "socket-udp", feature = "socket-dns"))]
+@@ -71,7 +71,7 @@ use check;
+ /// a dependency on heap allocation, it instead owns a `BorrowMut<[T]>`, which can be
+ /// a `&mut [T]`, or `Vec<T>` if a heap is available.
+ pub struct Interface {
+-    pub(crate) inner: InterfaceInner,
++    pub inner: InterfaceInner,
+     fragments: FragmentsBuffer,
+     fragmenter: Fragmenter,
+ }
+@@ -669,33 +669,33 @@ impl Interface {
+ 
+ impl InterfaceInner {
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn now(&self) -> Instant {
++    pub fn now(&self) -> Instant {
+         self.now
+     }
+ 
+     #[cfg(any(feature = "medium-ethernet", feature = "medium-ieee802154"))]
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn hardware_addr(&self) -> HardwareAddress {
++    pub fn hardware_addr(&self) -> HardwareAddress {
+         self.hardware_addr
+     }
+ 
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn checksum_caps(&self) -> ChecksumCapabilities {
++    pub fn checksum_caps(&self) -> ChecksumCapabilities {
+         self.caps.checksum.clone()
+     }
+ 
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn ip_mtu(&self) -> usize {
++    pub fn ip_mtu(&self) -> usize {
+         self.caps.ip_mtu()
+     }
+ 
+     #[allow(unused)] // unused depending on which sockets are enabled, and in tests
+-    pub(crate) fn rand(&mut self) -> &mut Rand {
++    pub fn rand(&mut self) -> &mut Rand {
+         &mut self.rand
+     }
+ 
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn get_source_address(&self, dst_addr: &IpAddress) -> Option<IpAddress> {
++    pub fn get_source_address(&self, dst_addr: &IpAddress) -> Option<IpAddress> {
+         match dst_addr {
+             #[cfg(feature = "proto-ipv4")]
+             IpAddress::Ipv4(addr) => self.get_source_address_ipv4(addr).map(|a| a.into()),
+@@ -706,7 +706,7 @@ impl InterfaceInner {
+ 
+     #[cfg(test)]
+     #[allow(unused)] // unused depending on which sockets are enabled
+-    pub(crate) fn set_now(&mut self, now: Instant) {
++    pub fn set_now(&mut self, now: Instant) {
+         self.now = now
+     }
+ 
+@@ -802,7 +802,7 @@ impl InterfaceInner {
+ 
+     /// Checks if an address is broadcast, taking into account ipv4 subnet-local
+     /// broadcast addresses.
+-    pub(crate) fn is_broadcast(&self, address: &IpAddress) -> bool {
++    pub fn is_broadcast(&self, address: &IpAddress) -> bool {
+         match address {
+             #[cfg(feature = "proto-ipv4")]
+             IpAddress::Ipv4(address) => self.is_broadcast_v4(*address),
+diff --git a/src/iface/interface/multicast.rs b/src/iface/interface/multicast.rs
+index d66ba4d..3f1ebfd 100644
+--- a/src/iface/interface/multicast.rs
++++ b/src/iface/interface/multicast.rs
+@@ -19,7 +19,7 @@ pub enum MulticastError {
+ }
+ 
+ #[cfg(feature = "proto-ipv4")]
+-pub(crate) enum IgmpReportState {
++pub enum IgmpReportState {
+     Inactive,
+     ToGeneralQuery {
+         version: IgmpVersion,
+@@ -44,7 +44,7 @@ enum GroupState {
+     Leaving,
+ }
+ 
+-pub(crate) struct State {
++pub struct State {
+     groups: LinearMap<IpAddress, GroupState, IFACE_MAX_MULTICAST_GROUP_COUNT>,
+     /// When to report for (all or) the next multicast group membership via IGMP
+     #[cfg(feature = "proto-ipv4")]
+@@ -52,7 +52,7 @@ pub(crate) struct State {
+ }
+ 
+ impl State {
+-    pub(crate) fn new() -> Self {
++    pub fn new() -> Self {
+         Self {
+             groups: LinearMap::new(),
+             #[cfg(feature = "proto-ipv4")]
+@@ -60,7 +60,7 @@ impl State {
+         }
+     }
+ 
+-    pub(crate) fn has_multicast_group<T: Into<IpAddress>>(&self, addr: T) -> bool {
++    pub fn has_multicast_group<T: Into<IpAddress>>(&self, addr: T) -> bool {
+         // Return false if we don't have the multicast group,
+         // or we're leaving it.
+         match self.groups.get(&addr.into()) {
+@@ -145,7 +145,7 @@ impl Interface {
+     /// - Send join/leave packets according to the multicast group state.
+     /// - Depending on `igmp_report_state` and the therein contained
+     ///   timeouts, send IGMP membership reports.
+-    pub(crate) fn multicast_egress<D>(&mut self, device: &mut D)
++    pub fn multicast_egress<D>(&mut self, device: &mut D)
+     where
+         D: Device + ?Sized,
+     {
+diff --git a/src/iface/interface/sixlowpan.rs b/src/iface/interface/sixlowpan.rs
+index a89934f..2aba996 100644
+--- a/src/iface/interface/sixlowpan.rs
++++ b/src/iface/interface/sixlowpan.rs
+@@ -3,7 +3,7 @@ use crate::wire::Result;
+ 
+ // Max len of non-fragmented packets after decompression (including ipv6 header and payload)
+ // TODO: lower. Should be (6lowpan mtu) - (min 6lowpan header size) + (max ipv6 header size)
+-pub(crate) const MAX_DECOMPRESSED_LEN: usize = 1500;
++pub const MAX_DECOMPRESSED_LEN: usize = 1500;
+ 
+ impl Interface {
+     /// Process fragments that still need to be sent for 6LoWPAN packets.
+diff --git a/src/iface/interface/tcp.rs b/src/iface/interface/tcp.rs
+index 85fe070..ec3ace3 100644
+--- a/src/iface/interface/tcp.rs
++++ b/src/iface/interface/tcp.rs
+@@ -3,7 +3,7 @@ use super::*;
+ use crate::socket::tcp::Socket;
+ 
+ impl InterfaceInner {
+-    pub(crate) fn process_tcp<'frame>(
++    pub fn process_tcp<'frame>(
+         &mut self,
+         sockets: &mut SocketSet,
+         ip_repr: IpRepr,
+diff --git a/src/iface/neighbor.rs b/src/iface/neighbor.rs
+index dcef2bb..b99db14 100644
+--- a/src/iface/neighbor.rs
++++ b/src/iface/neighbor.rs
+@@ -21,7 +21,7 @@ pub struct Neighbor {
+ /// An answer to a neighbor cache lookup.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) enum Answer {
++pub enum Answer {
+     /// The neighbor address is in the cache and not expired.
+     Found(HardwareAddress),
+     /// The neighbor address is not in the cache, or has expired.
+@@ -33,7 +33,7 @@ pub(crate) enum Answer {
+ 
+ impl Answer {
+     /// Returns whether a valid address was found.
+-    pub(crate) fn found(&self) -> bool {
++    pub fn found(&self) -> bool {
+         match self {
+             Answer::Found(_) => true,
+             _ => false,
+@@ -50,10 +50,10 @@ pub struct Cache {
+ 
+ impl Cache {
+     /// Minimum delay between discovery requests, in milliseconds.
+-    pub(crate) const SILENT_TIME: Duration = Duration::from_millis(1_000);
++    pub const SILENT_TIME: Duration = Duration::from_millis(1_000);
+ 
+     /// Neighbor entry lifetime, in milliseconds.
+-    pub(crate) const ENTRY_LIFETIME: Duration = Duration::from_millis(60_000);
++    pub const ENTRY_LIFETIME: Duration = Duration::from_millis(60_000);
+ 
+     /// Create a cache.
+     pub fn new() -> Self {
+@@ -147,7 +147,7 @@ impl Cache {
+         }
+     }
+ 
+-    pub(crate) fn lookup(&self, protocol_addr: &IpAddress, timestamp: Instant) -> Answer {
++    pub fn lookup(&self, protocol_addr: &IpAddress, timestamp: Instant) -> Answer {
+         assert!(protocol_addr.is_unicast());
+ 
+         if let Some(&Neighbor {
+@@ -167,11 +167,11 @@ impl Cache {
+         }
+     }
+ 
+-    pub(crate) fn limit_rate(&mut self, timestamp: Instant) {
++    pub fn limit_rate(&mut self, timestamp: Instant) {
+         self.silent_until = timestamp + Self::SILENT_TIME;
+     }
+ 
+-    pub(crate) fn flush(&mut self) {
++    pub fn flush(&mut self) {
+         self.storage.clear()
+     }
+ }
+diff --git a/src/iface/packet.rs b/src/iface/packet.rs
+index 1ccc676..8ed4c9f 100644
+--- a/src/iface/packet.rs
++++ b/src/iface/packet.rs
+@@ -5,7 +5,7 @@ use crate::wire::*;
+ #[derive(Debug, PartialEq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+ #[cfg(feature = "medium-ethernet")]
+-pub(crate) enum EthernetPacket<'a> {
++pub enum EthernetPacket<'a> {
+     #[cfg(feature = "proto-ipv4")]
+     Arp(ArpRepr),
+     Ip(Packet<'a>),
+@@ -13,7 +13,7 @@ pub(crate) enum EthernetPacket<'a> {
+ 
+ #[derive(Debug, PartialEq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) enum Packet<'p> {
++pub enum Packet<'p> {
+     #[cfg(feature = "proto-ipv4")]
+     Ipv4(PacketV4<'p>),
+     #[cfg(feature = "proto-ipv6")]
+@@ -21,7 +21,7 @@ pub(crate) enum Packet<'p> {
+ }
+ 
+ impl<'p> Packet<'p> {
+-    pub(crate) fn new(ip_repr: IpRepr, payload: IpPayload<'p>) -> Self {
++    pub fn new(ip_repr: IpRepr, payload: IpPayload<'p>) -> Self {
+         match ip_repr {
+             #[cfg(feature = "proto-ipv4")]
+             IpRepr::Ipv4(header) => Self::new_ipv4(header, payload),
+@@ -31,7 +31,7 @@ impl<'p> Packet<'p> {
+     }
+ 
+     #[cfg(feature = "proto-ipv4")]
+-    pub(crate) fn new_ipv4(ip_repr: Ipv4Repr, payload: IpPayload<'p>) -> Self {
++    pub fn new_ipv4(ip_repr: Ipv4Repr, payload: IpPayload<'p>) -> Self {
+         Self::Ipv4(PacketV4 {
+             header: ip_repr,
+             payload,
+@@ -39,7 +39,7 @@ impl<'p> Packet<'p> {
+     }
+ 
+     #[cfg(feature = "proto-ipv6")]
+-    pub(crate) fn new_ipv6(ip_repr: Ipv6Repr, payload: IpPayload<'p>) -> Self {
++    pub fn new_ipv6(ip_repr: Ipv6Repr, payload: IpPayload<'p>) -> Self {
+         Self::Ipv6(PacketV6 {
+             header: ip_repr,
+             #[cfg(feature = "proto-ipv6-hbh")]
+@@ -52,7 +52,7 @@ impl<'p> Packet<'p> {
+         })
+     }
+ 
+-    pub(crate) fn ip_repr(&self) -> IpRepr {
++    pub fn ip_repr(&self) -> IpRepr {
+         match self {
+             #[cfg(feature = "proto-ipv4")]
+             Packet::Ipv4(p) => IpRepr::Ipv4(p.header),
+@@ -61,7 +61,7 @@ impl<'p> Packet<'p> {
+         }
+     }
+ 
+-    pub(crate) fn payload(&self) -> &IpPayload<'p> {
++    pub fn payload(&self) -> &IpPayload<'p> {
+         match self {
+             #[cfg(feature = "proto-ipv4")]
+             Packet::Ipv4(p) => &p.payload,
+@@ -70,7 +70,7 @@ impl<'p> Packet<'p> {
+         }
+     }
+ 
+-    pub(crate) fn emit_payload(
++    pub fn emit_payload(
+         &self,
+         _ip_repr: &IpRepr,
+         payload: &mut [u8],
+@@ -183,7 +183,7 @@ impl<'p> Packet<'p> {
+ #[derive(Debug, PartialEq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+ #[cfg(feature = "proto-ipv4")]
+-pub(crate) struct PacketV4<'p> {
++pub struct PacketV4<'p> {
+     header: Ipv4Repr,
+     payload: IpPayload<'p>,
+ }
+@@ -191,20 +191,20 @@ pub(crate) struct PacketV4<'p> {
+ #[derive(Debug, PartialEq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+ #[cfg(feature = "proto-ipv6")]
+-pub(crate) struct PacketV6<'p> {
+-    pub(crate) header: Ipv6Repr,
++pub struct PacketV6<'p> {
++    pub header: Ipv6Repr,
+     #[cfg(feature = "proto-ipv6-hbh")]
+-    pub(crate) hop_by_hop: Option<Ipv6HopByHopRepr<'p>>,
++    pub hop_by_hop: Option<Ipv6HopByHopRepr<'p>>,
+     #[cfg(feature = "proto-ipv6-fragmentation")]
+-    pub(crate) fragment: Option<Ipv6FragmentRepr>,
++    pub fragment: Option<Ipv6FragmentRepr>,
+     #[cfg(feature = "proto-ipv6-routing")]
+-    pub(crate) routing: Option<Ipv6RoutingRepr<'p>>,
+-    pub(crate) payload: IpPayload<'p>,
++    pub routing: Option<Ipv6RoutingRepr<'p>>,
++    pub payload: IpPayload<'p>,
+ }
+ 
+ #[derive(Debug, PartialEq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) enum IpPayload<'p> {
++pub enum IpPayload<'p> {
+     #[cfg(feature = "proto-ipv4")]
+     Icmpv4(Icmpv4Repr<'p>),
+     #[cfg(all(feature = "proto-ipv4", feature = "multicast"))]
+@@ -225,7 +225,7 @@ pub(crate) enum IpPayload<'p> {
+ 
+ impl<'p> IpPayload<'p> {
+     #[cfg(feature = "proto-sixlowpan")]
+-    pub(crate) fn as_sixlowpan_next_header(&self) -> SixlowpanNextHeader {
++    pub fn as_sixlowpan_next_header(&self) -> SixlowpanNextHeader {
+         match self {
+             #[cfg(feature = "proto-ipv4")]
+             Self::Icmpv4(_) => unreachable!(),
+@@ -248,7 +248,7 @@ impl<'p> IpPayload<'p> {
+ }
+ 
+ #[cfg(any(feature = "proto-ipv4", feature = "proto-ipv6"))]
+-pub(crate) fn icmp_reply_payload_len(len: usize, mtu: usize, header_len: usize) -> usize {
++pub fn icmp_reply_payload_len(len: usize, mtu: usize, header_len: usize) -> usize {
+     // Send back as much of the original payload as will fit within
+     // the minimum MTU required by IPv4. See RFC 1812 § 4.3.2.3 for
+     // more details.
+diff --git a/src/iface/route.rs b/src/iface/route.rs
+index 123c695..a96eece 100644
+--- a/src/iface/route.rs
++++ b/src/iface/route.rs
+@@ -146,7 +146,7 @@ impl Routes {
+         }
+     }
+ 
+-    pub(crate) fn lookup(&self, addr: &IpAddress, timestamp: Instant) -> Option<IpAddress> {
++    pub fn lookup(&self, addr: &IpAddress, timestamp: Instant) -> Option<IpAddress> {
+         assert!(addr.is_unicast());
+ 
+         self.storage
+diff --git a/src/iface/rpl/of0.rs b/src/iface/rpl/of0.rs
+index 99e4d1f..be858aa 100644
+--- a/src/iface/rpl/of0.rs
++++ b/src/iface/rpl/of0.rs
+@@ -3,7 +3,7 @@ use super::rank::Rank;
+ 
+ pub struct ObjectiveFunction0;
+ 
+-pub(crate) trait ObjectiveFunction {
++pub trait ObjectiveFunction {
+     const OCP: u16;
+ 
+     /// Return the new calculated Rank, based on information from the parent.
+diff --git a/src/iface/rpl/parents.rs b/src/iface/rpl/parents.rs
+index 70d5a5e..f7c8cbc 100644
+--- a/src/iface/rpl/parents.rs
++++ b/src/iface/rpl/parents.rs
+@@ -4,7 +4,7 @@ use super::{lollipop::SequenceCounter, rank::Rank};
+ use crate::config::RPL_PARENTS_BUFFER_COUNT;
+ 
+ #[derive(Debug, Clone, Copy, PartialEq)]
+-pub(crate) struct Parent {
++pub struct Parent {
+     rank: Rank,
+     preference: u8,
+     version_number: SequenceCounter,
+@@ -13,7 +13,7 @@ pub(crate) struct Parent {
+ 
+ impl Parent {
+     /// Create a new parent.
+-    pub(crate) fn new(
++    pub fn new(
+         preference: u8,
+         rank: Rank,
+         version_number: SequenceCounter,
+@@ -28,20 +28,20 @@ impl Parent {
+     }
+ 
+     /// Return the Rank of the parent.
+-    pub(crate) fn rank(&self) -> &Rank {
++    pub fn rank(&self) -> &Rank {
+         &self.rank
+     }
+ }
+ 
+ #[derive(Debug, Default)]
+-pub(crate) struct ParentSet {
++pub struct ParentSet {
+     parents: heapless::LinearMap<Ipv6Address, Parent, { RPL_PARENTS_BUFFER_COUNT }>,
+ }
+ 
+ impl ParentSet {
+     /// Add a new parent to the parent set. The Rank of the new parent should be lower than the
+     /// Rank of the node that holds this parent set.
+-    pub(crate) fn add(&mut self, address: Ipv6Address, parent: Parent) {
++    pub fn add(&mut self, address: Ipv6Address, parent: Parent) {
+         if let Some(p) = self.parents.get_mut(&address) {
+             *p = parent;
+         } else if let Err(p) = self.parents.insert(address, parent) {
+@@ -59,17 +59,17 @@ impl ParentSet {
+     }
+ 
+     /// Find a parent based on its address.
+-    pub(crate) fn find(&self, address: &Ipv6Address) -> Option<&Parent> {
++    pub fn find(&self, address: &Ipv6Address) -> Option<&Parent> {
+         self.parents.get(address)
+     }
+ 
+     /// Find a mutable parent based on its address.
+-    pub(crate) fn find_mut(&mut self, address: &Ipv6Address) -> Option<&mut Parent> {
++    pub fn find_mut(&mut self, address: &Ipv6Address) -> Option<&mut Parent> {
+         self.parents.get_mut(address)
+     }
+ 
+     /// Return a slice to the parent set.
+-    pub(crate) fn parents(&self) -> impl Iterator<Item = (&Ipv6Address, &Parent)> {
++    pub fn parents(&self) -> impl Iterator<Item = (&Ipv6Address, &Parent)> {
+         self.parents.iter()
+     }
+ 
+diff --git a/src/iface/rpl/trickle.rs b/src/iface/rpl/trickle.rs
+index a5b3b97..c108f74 100644
+--- a/src/iface/rpl/trickle.rs
++++ b/src/iface/rpl/trickle.rs
+@@ -16,7 +16,7 @@ use crate::{
+ 
+ #[derive(Debug, PartialEq, Eq)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) struct TrickleTimer {
++pub struct TrickleTimer {
+     i_min: u32,
+     i_max: u32,
+     k: usize,
+@@ -39,7 +39,7 @@ impl TrickleTimer {
+     /// don't use the default values from the standard, but the values from the _Enhanced Trickle
+     /// Algorithm for Low-Power and Lossy Networks_ from Baraq Ghaleb et al. This is also what the
+     /// Contiki Trickle timer does.
+-    pub(crate) fn default(now: Instant, rand: &mut Rand) -> Self {
++    pub fn default(now: Instant, rand: &mut Rand) -> Self {
+         use super::consts::{
+             DEFAULT_DIO_INTERVAL_DOUBLINGS, DEFAULT_DIO_INTERVAL_MIN,
+             DEFAULT_DIO_REDUNDANCY_CONSTANT,
+@@ -55,7 +55,7 @@ impl TrickleTimer {
+     }
+ 
+     /// Create a new Trickle timer.
+-    pub(crate) fn new(i_min: u32, i_max: u32, k: usize, now: Instant, rand: &mut Rand) -> Self {
++    pub fn new(i_min: u32, i_max: u32, k: usize, now: Instant, rand: &mut Rand) -> Self {
+         let mut timer = Self {
+             i_min,
+             i_max,
+@@ -78,7 +78,7 @@ impl TrickleTimer {
+ 
+     /// Poll the Trickle timer. Returns `true` when the Trickle timer signals that a message can be
+     /// transmitted. This happens when the Trickle timer expires.
+-    pub(crate) fn poll(&mut self, now: Instant, rand: &mut Rand) -> bool {
++    pub fn poll(&mut self, now: Instant, rand: &mut Rand) -> bool {
+         let can_transmit = self.can_transmit() && self.t_expired(now);
+ 
+         if can_transmit {
+@@ -94,19 +94,19 @@ impl TrickleTimer {
+ 
+     /// Returns the Instant at which the Trickle timer should be polled again. Polling the Trickle
+     /// timer before this Instant is not harmfull, however, polling after it is not correct.
+-    pub(crate) fn poll_at(&self) -> Instant {
++    pub fn poll_at(&self) -> Instant {
+         self.t_exp.min(self.i_exp)
+     }
+ 
+     /// Signal the Trickle timer that a consistency has been heard, and thus increasing it's
+     /// counter.
+-    pub(crate) fn hear_consistent(&mut self) {
++    pub fn hear_consistent(&mut self) {
+         self.counter += 1;
+     }
+ 
+     /// Signal the Trickle timer that an inconsistency has been heard. This resets the Trickle
+     /// timer when the current interval is not the smallest possible.
+-    pub(crate) fn hear_inconsistency(&mut self, now: Instant, rand: &mut Rand) {
++    pub fn hear_inconsistency(&mut self, now: Instant, rand: &mut Rand) {
+         let i = Duration::from_millis(2u32.pow(self.i_min) as u64);
+         if self.i > i {
+             self.reset(i, now, rand);
+@@ -115,7 +115,7 @@ impl TrickleTimer {
+ 
+     /// Check if the Trickle timer can transmit or not. Returns `false` when the consistency
+     /// counter is bigger or equal to the default consistency constant.
+-    pub(crate) fn can_transmit(&self) -> bool {
++    pub fn can_transmit(&self) -> bool {
+         self.k != 0 && self.counter < self.k
+     }
+ 
+@@ -131,18 +131,18 @@ impl TrickleTimer {
+         self.reset(i, now, rand);
+     }
+ 
+-    pub(crate) fn reset(&mut self, i: Duration, now: Instant, rand: &mut Rand) {
++    pub fn reset(&mut self, i: Duration, now: Instant, rand: &mut Rand) {
+         self.i = i;
+         self.i_exp = now + self.i;
+         self.counter = 0;
+         self.set_t(now, rand);
+     }
+ 
+-    pub(crate) const fn max_expiration(&self) -> Duration {
++    pub const fn max_expiration(&self) -> Duration {
+         Duration::from_millis(2u32.pow(self.i_max) as u64)
+     }
+ 
+-    pub(crate) const fn min_expiration(&self) -> Duration {
++    pub const fn min_expiration(&self) -> Duration {
+         Duration::from_millis(2u32.pow(self.i_min) as u64)
+     }
+ 
+diff --git a/src/iface/socket_meta.rs b/src/iface/socket_meta.rs
+index 82c9908..90926f6 100644
+--- a/src/iface/socket_meta.rs
++++ b/src/iface/socket_meta.rs
+@@ -30,10 +30,10 @@ enum NeighborState {
+ /// itself.
+ #[derive(Debug, Default)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) struct Meta {
++pub struct Meta {
+     /// Handle of this socket within its enclosing `SocketSet`.
+     /// Mainly useful for debug output.
+-    pub(crate) handle: SocketHandle,
++    pub handle: SocketHandle,
+     /// See [NeighborState](struct.NeighborState.html).
+     neighbor_state: NeighborState,
+ }
+@@ -43,9 +43,9 @@ impl Meta {
+     /// socket, in milliseconds.
+     ///
+     /// See also `iface::NeighborCache::SILENT_TIME`.
+-    pub(crate) const DISCOVERY_SILENT_TIME: Duration = Duration::from_millis(1_000);
++    pub const DISCOVERY_SILENT_TIME: Duration = Duration::from_millis(1_000);
+ 
+-    pub(crate) fn poll_at<F>(&self, socket_poll_at: PollAt, has_neighbor: F) -> PollAt
++    pub fn poll_at<F>(&self, socket_poll_at: PollAt, has_neighbor: F) -> PollAt
+     where
+         F: Fn(IpAddress) -> bool,
+     {
+@@ -56,7 +56,7 @@ impl Meta {
+         }
+     }
+ 
+-    pub(crate) fn egress_permitted<F>(&mut self, timestamp: Instant, has_neighbor: F) -> bool
++    pub fn egress_permitted<F>(&mut self, timestamp: Instant, has_neighbor: F) -> bool
+     where
+         F: Fn(IpAddress) -> bool,
+     {
+@@ -88,7 +88,7 @@ impl Meta {
+         }
+     }
+ 
+-    pub(crate) fn neighbor_missing(&mut self, timestamp: Instant, neighbor: IpAddress) {
++    pub fn neighbor_missing(&mut self, timestamp: Instant, neighbor: IpAddress) {
+         net_trace!(
+             "{}: neighbor {} missing, silencing until t+{}",
+             self.handle,
+diff --git a/src/iface/socket_set.rs b/src/iface/socket_set.rs
+index be55fef..ddaf1a2 100644
+--- a/src/iface/socket_set.rs
++++ b/src/iface/socket_set.rs
+@@ -19,9 +19,9 @@ impl<'a> SocketStorage<'a> {
+ 
+ /// An item of a socket set.
+ #[derive(Debug)]
+-pub(crate) struct Item<'a> {
+-    pub(crate) meta: Meta,
+-    pub(crate) socket: Socket<'a>,
++pub struct Item<'a> {
++    pub meta: Meta,
++    pub socket: Socket<'a>,
+ }
+ 
+ /// A handle, identifying a socket in an Interface.
+@@ -140,12 +140,12 @@ impl<'a> SocketSet<'a> {
+     }
+ 
+     /// Iterate every socket in this set.
+-    pub(crate) fn items(&self) -> impl Iterator<Item = &Item<'a>> + '_ {
++    pub fn items(&self) -> impl Iterator<Item = &Item<'a>> + '_ {
+         self.sockets.iter().filter_map(|x| x.inner.as_ref())
+     }
+ 
+     /// Iterate every socket in this set.
+-    pub(crate) fn items_mut(&mut self) -> impl Iterator<Item = &mut Item<'a>> + '_ {
++    pub fn items_mut(&mut self) -> impl Iterator<Item = &mut Item<'a>> + '_ {
+         self.sockets.iter_mut().filter_map(|x| x.inner.as_mut())
+     }
+ }
+diff --git a/src/phy/loopback.rs b/src/phy/loopback.rs
+index fd3aea7..07990c4 100644
+--- a/src/phy/loopback.rs
++++ b/src/phy/loopback.rs
+@@ -8,7 +8,7 @@ use crate::time::Instant;
+ /// A loopback device.
+ #[derive(Debug)]
+ pub struct Loopback {
+-    pub(crate) queue: VecDeque<Vec<u8>>,
++    pub queue: VecDeque<Vec<u8>>,
+     medium: Medium,
+ }
+ 
+diff --git a/src/rand.rs b/src/rand.rs
+index 15d88f7..27ad09a 100644
+--- a/src/rand.rs
++++ b/src/rand.rs
+@@ -2,16 +2,16 @@
+ #![allow(unused)]
+ 
+ #[derive(Debug)]
+-pub(crate) struct Rand {
++pub struct Rand {
+     state: u64,
+ }
+ 
+ impl Rand {
+-    pub(crate) const fn new(seed: u64) -> Self {
++    pub const fn new(seed: u64) -> Self {
+         Self { state: seed }
+     }
+ 
+-    pub(crate) fn rand_u32(&mut self) -> u32 {
++    pub fn rand_u32(&mut self) -> u32 {
+         // sPCG32 from https://www.pcg-random.org/paper.html
+         // see also https://nullprogram.com/blog/2017/09/21/
+         const M: u64 = 0xbb2efcec3c39611d;
+@@ -24,12 +24,12 @@ impl Rand {
+         (s >> shift) as u32
+     }
+ 
+-    pub(crate) fn rand_u16(&mut self) -> u16 {
++    pub fn rand_u16(&mut self) -> u16 {
+         let n = self.rand_u32();
+         (n ^ (n >> 16)) as u16
+     }
+ 
+-    pub(crate) fn rand_source_port(&mut self) -> u16 {
++    pub fn rand_source_port(&mut self) -> u16 {
+         loop {
+             let res = self.rand_u16();
+             if res > 1024 {
+diff --git a/src/socket/dhcpv4.rs b/src/socket/dhcpv4.rs
+index b1b3cb5..ef02eb7 100644
+--- a/src/socket/dhcpv4.rs
++++ b/src/socket/dhcpv4.rs
+@@ -168,10 +168,10 @@ pub struct Socket<'a> {
+     ignore_naks: bool,
+ 
+     /// Server port config
+-    pub(crate) server_port: u16,
++    pub server_port: u16,
+ 
+     /// Client port config
+-    pub(crate) client_port: u16,
++    pub client_port: u16,
+ 
+     /// A buffer contains options additional to be added to outgoing DHCP
+     /// packets.
+@@ -287,7 +287,7 @@ impl<'a> Socket<'a> {
+         self.client_port = client_port;
+     }
+ 
+-    pub(crate) fn poll_at(&self, _cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, _cx: &mut Context) -> PollAt {
+         let t = match &self.state {
+             ClientState::Discovering(state) => state.retry_at,
+             ClientState::Requesting(state) => state.retry_at,
+@@ -301,7 +301,7 @@ impl<'a> Socket<'a> {
+         PollAt::Time(t)
+     }
+ 
+-    pub(crate) fn process(
++    pub fn process(
+         &mut self,
+         cx: &mut Context,
+         ip_repr: &Ipv4Repr,
+@@ -547,7 +547,7 @@ impl<'a> Socket<'a> {
+         0x12345678
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, (Ipv4Repr, UdpRepr, DhcpRepr)) -> Result<(), E>,
+     {
+@@ -753,7 +753,7 @@ impl<'a> Socket<'a> {
+     /// This function _must_ be called when the configuration provided to the
+     /// interface, by this DHCP socket, changes. It will update the `config_changed` field
+     /// so that a subsequent call to `poll` will yield an event, and wake a possible waker.
+-    pub(crate) fn config_changed(&mut self) {
++    pub fn config_changed(&mut self) {
+         self.config_changed = true;
+         #[cfg(feature = "async")]
+         self.waker.wake();
+diff --git a/src/socket/dns.rs b/src/socket/dns.rs
+index abb0f0c..0f02e2e 100644
+--- a/src/socket/dns.rs
++++ b/src/socket/dns.rs
+@@ -368,7 +368,7 @@ impl<'a> Socket<'a> {
+             .register(waker);
+     }
+ 
+-    pub(crate) fn accepts(&self, ip_repr: &IpRepr, udp_repr: &UdpRepr) -> bool {
++    pub fn accepts(&self, ip_repr: &IpRepr, udp_repr: &UdpRepr) -> bool {
+         (udp_repr.src_port == DNS_PORT
+             && self
+                 .servers
+@@ -377,7 +377,7 @@ impl<'a> Socket<'a> {
+             || (udp_repr.src_port == MDNS_DNS_PORT)
+     }
+ 
+-    pub(crate) fn process(
++    pub fn process(
+         &mut self,
+         _cx: &mut Context,
+         ip_repr: &IpRepr,
+@@ -531,7 +531,7 @@ impl<'a> Socket<'a> {
+         net_trace!("no query matched");
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, (IpRepr, UdpRepr, &[u8])) -> Result<(), E>,
+     {
+@@ -653,7 +653,7 @@ impl<'a> Socket<'a> {
+         Ok(())
+     }
+ 
+-    pub(crate) fn poll_at(&self, _cx: &Context) -> PollAt {
++    pub fn poll_at(&self, _cx: &Context) -> PollAt {
+         self.queries
+             .iter()
+             .flatten()
+diff --git a/src/socket/icmp.rs b/src/socket/icmp.rs
+index 85a34b1..efcafba 100644
+--- a/src/socket/icmp.rs
++++ b/src/socket/icmp.rs
+@@ -416,7 +416,7 @@ impl<'a> Socket<'a> {
+     /// Accepted packets are enqueued into the socket's receive buffer.
+     #[cfg(feature = "proto-ipv4")]
+     #[inline]
+-    pub(crate) fn accepts_v4(
++    pub fn accepts_v4(
+         &self,
+         cx: &mut Context,
+         ip_repr: &Ipv4Repr,
+@@ -458,7 +458,7 @@ impl<'a> Socket<'a> {
+     /// Accepted packets are enqueued into the socket's receive buffer.
+     #[cfg(feature = "proto-ipv6")]
+     #[inline]
+-    pub(crate) fn accepts_v6(
++    pub fn accepts_v6(
+         &self,
+         cx: &mut Context,
+         ip_repr: &Ipv6Repr,
+@@ -497,7 +497,7 @@ impl<'a> Socket<'a> {
+     }
+ 
+     #[cfg(feature = "proto-ipv4")]
+-    pub(crate) fn process_v4(
++    pub fn process_v4(
+         &mut self,
+         _cx: &mut Context,
+         ip_repr: &Ipv4Repr,
+@@ -523,7 +523,7 @@ impl<'a> Socket<'a> {
+     }
+ 
+     #[cfg(feature = "proto-ipv6")]
+-    pub(crate) fn process_v6(
++    pub fn process_v6(
+         &mut self,
+         _cx: &mut Context,
+         ip_repr: &Ipv6Repr,
+@@ -548,7 +548,7 @@ impl<'a> Socket<'a> {
+         self.rx_waker.wake();
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, (IpRepr, IcmpRepr)) -> Result<(), E>,
+     {
+@@ -634,7 +634,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn poll_at(&self, _cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, _cx: &mut Context) -> PollAt {
+         if self.tx_buffer.is_empty() {
+             PollAt::Ingress
+         } else {
+diff --git a/src/socket/mod.rs b/src/socket/mod.rs
+index 7d48b42..9681f08 100644
+--- a/src/socket/mod.rs
++++ b/src/socket/mod.rs
+@@ -31,12 +31,12 @@ pub mod udp;
+ mod waker;
+ 
+ #[cfg(feature = "async")]
+-pub(crate) use self::waker::WakerRegistration;
++pub use self::waker::WakerRegistration;
+ 
+ /// Gives an indication on the next time the socket should be polled.
+ #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+-pub(crate) enum PollAt {
++pub enum PollAt {
+     /// The socket needs to be polled immediately.
+     Now,
+     /// The socket needs to be polled at given [Instant][struct.Instant].
+@@ -72,7 +72,7 @@ pub enum Socket<'a> {
+ }
+ 
+ impl<'a> Socket<'a> {
+-    pub(crate) fn poll_at(&self, cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, cx: &mut Context) -> PollAt {
+         match self {
+             #[cfg(feature = "socket-raw")]
+             Socket::Raw(s) => s.poll_at(cx),
+diff --git a/src/socket/raw.rs b/src/socket/raw.rs
+index bb3a204..df6355b 100644
+--- a/src/socket/raw.rs
++++ b/src/socket/raw.rs
+@@ -327,7 +327,7 @@ impl<'a> Socket<'a> {
+         Ok(length)
+     }
+ 
+-    pub(crate) fn accepts(&self, ip_repr: &IpRepr) -> bool {
++    pub fn accepts(&self, ip_repr: &IpRepr) -> bool {
+         if ip_repr.version() != self.ip_version {
+             return false;
+         }
+@@ -338,7 +338,7 @@ impl<'a> Socket<'a> {
+         true
+     }
+ 
+-    pub(crate) fn process(&mut self, cx: &mut Context, ip_repr: &IpRepr, payload: &[u8]) {
++    pub fn process(&mut self, cx: &mut Context, ip_repr: &IpRepr, payload: &[u8]) {
+         debug_assert!(self.accepts(ip_repr));
+ 
+         let header_len = ip_repr.header_len();
+@@ -367,7 +367,7 @@ impl<'a> Socket<'a> {
+         self.rx_waker.wake();
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, (IpRepr, &[u8])) -> Result<(), E>,
+     {
+@@ -450,7 +450,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn poll_at(&self, _cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, _cx: &mut Context) -> PollAt {
+         if self.tx_buffer.is_empty() {
+             PollAt::Ingress
+         } else {
+diff --git a/src/socket/tcp.rs b/src/socket/tcp.rs
+index f944875..848c860 100644
+--- a/src/socket/tcp.rs
++++ b/src/socket/tcp.rs
+@@ -1324,7 +1324,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn reply(ip_repr: &IpRepr, repr: &TcpRepr) -> (IpRepr, TcpRepr<'static>) {
++    pub fn reply(ip_repr: &IpRepr, repr: &TcpRepr) -> (IpRepr, TcpRepr<'static>) {
+         let reply_repr = TcpRepr {
+             src_port: repr.dst_port,
+             dst_port: repr.src_port,
+@@ -1349,7 +1349,7 @@ impl<'a> Socket<'a> {
+         (ip_reply_repr, reply_repr)
+     }
+ 
+-    pub(crate) fn rst_reply(ip_repr: &IpRepr, repr: &TcpRepr) -> (IpRepr, TcpRepr<'static>) {
++    pub fn rst_reply(ip_repr: &IpRepr, repr: &TcpRepr) -> (IpRepr, TcpRepr<'static>) {
+         debug_assert!(repr.control != TcpControl::Rst);
+ 
+         let (ip_reply_repr, mut reply_repr) = Self::reply(ip_repr, repr);
+@@ -1441,7 +1441,7 @@ impl<'a> Socket<'a> {
+         Some(self.ack_reply(ip_repr, repr))
+     }
+ 
+-    pub(crate) fn accepts(&self, _cx: &mut Context, ip_repr: &IpRepr, repr: &TcpRepr) -> bool {
++    pub fn accepts(&self, _cx: &mut Context, ip_repr: &IpRepr, repr: &TcpRepr) -> bool {
+         if self.state == State::Closed {
+             return false;
+         }
+@@ -1469,7 +1469,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn process(
++    pub fn process(
+         &mut self,
+         cx: &mut Context,
+         ip_repr: &IpRepr,
+@@ -2207,7 +2207,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, (IpRepr, TcpRepr)) -> Result<(), E>,
+     {
+@@ -2508,7 +2508,7 @@ impl<'a> Socket<'a> {
+     }
+ 
+     #[allow(clippy::if_same_then_else)]
+-    pub(crate) fn poll_at(&self, cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, cx: &mut Context) -> PollAt {
+         // The logic here mirrors the beginning of dispatch() closely.
+         if self.tuple.is_none() {
+             // No one to talk to, nothing to transmit.
+diff --git a/src/socket/udp.rs b/src/socket/udp.rs
+index 269043e..596ab98 100644
+--- a/src/socket/udp.rs
++++ b/src/socket/udp.rs
+@@ -459,7 +459,7 @@ impl<'a> Socket<'a> {
+         Ok((length, endpoint))
+     }
+ 
+-    pub(crate) fn accepts(&self, cx: &mut Context, ip_repr: &IpRepr, repr: &UdpRepr) -> bool {
++    pub fn accepts(&self, cx: &mut Context, ip_repr: &IpRepr, repr: &UdpRepr) -> bool {
+         if self.endpoint.port != repr.dst_port {
+             return false;
+         }
+@@ -474,7 +474,7 @@ impl<'a> Socket<'a> {
+         true
+     }
+ 
+-    pub(crate) fn process(
++    pub fn process(
+         &mut self,
+         cx: &mut Context,
+         meta: PacketMeta,
+@@ -517,7 +517,7 @@ impl<'a> Socket<'a> {
+         self.rx_waker.wake();
+     }
+ 
+-    pub(crate) fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
++    pub fn dispatch<F, E>(&mut self, cx: &mut Context, emit: F) -> Result<(), E>
+     where
+         F: FnOnce(&mut Context, PacketMeta, (IpRepr, UdpRepr, &[u8])) -> Result<(), E>,
+     {
+@@ -576,7 +576,7 @@ impl<'a> Socket<'a> {
+         }
+     }
+ 
+-    pub(crate) fn poll_at(&self, _cx: &mut Context) -> PollAt {
++    pub fn poll_at(&self, _cx: &mut Context) -> PollAt {
+         if self.tx_buffer.is_empty() {
+             PollAt::Ingress
+         } else {
+diff --git a/src/storage/packet_buffer.rs b/src/storage/packet_buffer.rs
+index 28119fa..1f2b5f8 100644
+--- a/src/storage/packet_buffer.rs
++++ b/src/storage/packet_buffer.rs
+@@ -241,7 +241,7 @@ impl<'a, H> PacketBuffer<'a, H> {
+ 
+     /// Reset the packet buffer and clear any staged.
+     #[allow(unused)]
+-    pub(crate) fn reset(&mut self) {
++    pub fn reset(&mut self) {
+         self.payload_ring.clear();
+         self.metadata_ring.clear();
+     }
+diff --git a/src/tests.rs b/src/tests.rs
+index b9eb740..a0b3000 100644
+--- a/src/tests.rs
++++ b/src/tests.rs
+@@ -1,7 +1,7 @@
+ use crate::iface::*;
+ use crate::wire::*;
+ 
+-pub(crate) fn setup<'a>(medium: Medium) -> (Interface, SocketSet<'a>, TestingDevice) {
++pub fn setup<'a>(medium: Medium) -> (Interface, SocketSet<'a>, TestingDevice) {
+     let mut device = TestingDevice::new(medium);
+ 
+     let config = Config::new(match medium {
+@@ -58,7 +58,7 @@ use crate::time::Instant;
+ /// A testing device.
+ #[derive(Debug)]
+ pub struct TestingDevice {
+-    pub(crate) queue: Deque<Vec<u8, 1514>, 4>,
++    pub queue: Deque<Vec<u8, 1514>, 4>,
+     max_transmission_unit: usize,
+     medium: Medium,
+ }
+diff --git a/src/wire/dhcpv4.rs b/src/wire/dhcpv4.rs
+index b00f26f..de8672f 100644
+--- a/src/wire/dhcpv4.rs
++++ b/src/wire/dhcpv4.rs
+@@ -117,7 +117,7 @@ pub struct Packet<T: AsRef<[u8]>> {
+     buffer: T,
+ }
+ 
+-pub(crate) mod field {
++pub mod field {
+     #![allow(non_snake_case)]
+     #![allow(unused)]
+ 
+diff --git a/src/wire/ip.rs b/src/wire/ip.rs
+index 1d1c63d..6ed9e3b 100644
+--- a/src/wire/ip.rs
++++ b/src/wire/ip.rs
+@@ -818,7 +818,7 @@ pub mod checksum {
+     }
+ 
+     // We use this in pretty printer implementations.
+-    pub(crate) fn format_checksum(f: &mut fmt::Formatter, correct: bool) -> fmt::Result {
++    pub fn format_checksum(f: &mut fmt::Formatter, correct: bool) -> fmt::Result {
+         if !correct {
+             write!(f, " (checksum incorrect)")
+         } else {
+@@ -905,7 +905,7 @@ pub fn pretty_print_ip_payload<T: Into<Repr>>(
+ }
+ 
+ #[cfg(test)]
+-pub(crate) mod test {
++pub mod test {
+     #![allow(unused)]
+ 
+     use super::*;
+diff --git a/src/wire/ipv4.rs b/src/wire/ipv4.rs
+index b5f7894..c9c6408 100644
+--- a/src/wire/ipv4.rs
++++ b/src/wire/ipv4.rs
+@@ -791,19 +791,19 @@ impl<T: AsRef<[u8]>> PrettyPrint for Packet<T> {
+ }
+ 
+ #[cfg(test)]
+-pub(crate) mod test {
++pub mod test {
+     use super::*;
+ 
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_1: Address = Address([192, 168, 1, 1]);
++    pub const MOCK_IP_ADDR_1: Address = Address([192, 168, 1, 1]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_2: Address = Address([192, 168, 1, 2]);
++    pub const MOCK_IP_ADDR_2: Address = Address([192, 168, 1, 2]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_3: Address = Address([192, 168, 1, 3]);
++    pub const MOCK_IP_ADDR_3: Address = Address([192, 168, 1, 3]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_4: Address = Address([192, 168, 1, 4]);
++    pub const MOCK_IP_ADDR_4: Address = Address([192, 168, 1, 4]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_UNSPECIFIED: Address = Address::UNSPECIFIED;
++    pub const MOCK_UNSPECIFIED: Address = Address::UNSPECIFIED;
+ 
+     static PACKET_BYTES: [u8; 30] = [
+         0x45, 0x00, 0x00, 0x1e, 0x01, 0x02, 0x62, 0x03, 0x1a, 0x01, 0xd5, 0x6e, 0x11, 0x12, 0x13,
+diff --git a/src/wire/ipv6.rs b/src/wire/ipv6.rs
+index e13c8ed..f003cc6 100644
+--- a/src/wire/ipv6.rs
++++ b/src/wire/ipv6.rs
+@@ -30,7 +30,7 @@ pub const IPV4_MAPPED_PREFIX_SIZE: usize = ADDR_SIZE - 4; // 4 == ipv4::ADDR_SIZ
+ /// [scope]: https://www.rfc-editor.org/rfc/rfc4291#section-2.7
+ #[repr(u8)]
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub(crate) enum MulticastScope {
++pub enum MulticastScope {
+     /// Interface Local scope
+     InterfaceLocal = 0x1,
+     /// Link local scope
+@@ -288,7 +288,7 @@ impl Address {
+     }
+ 
+     /// Return the scope of the address.
+-    pub(crate) fn multicast_scope(&self) -> MulticastScope {
++    pub fn multicast_scope(&self) -> MulticastScope {
+         if self.is_multicast() {
+             return MulticastScope::from(self.as_bytes()[1] & 0b1111);
+         }
+@@ -903,7 +903,7 @@ impl<T: AsRef<[u8]>> PrettyPrint for Packet<T> {
+ }
+ 
+ #[cfg(test)]
+-pub(crate) mod test {
++pub mod test {
+     use super::Error;
+     use super::{Address, Cidr};
+     use super::{Packet, Protocol, Repr};
+@@ -913,19 +913,19 @@ pub(crate) mod test {
+     use crate::wire::ipv4::Address as Ipv4Address;
+ 
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_1: Address =
++    pub const MOCK_IP_ADDR_1: Address =
+         Address([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_2: Address =
++    pub const MOCK_IP_ADDR_2: Address =
+         Address([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_3: Address =
++    pub const MOCK_IP_ADDR_3: Address =
+         Address([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_IP_ADDR_4: Address =
++    pub const MOCK_IP_ADDR_4: Address =
+         Address([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4]);
+     #[allow(unused)]
+-    pub(crate) const MOCK_UNSPECIFIED: Address = Address::UNSPECIFIED;
++    pub const MOCK_UNSPECIFIED: Address = Address::UNSPECIFIED;
+ 
+     const LINK_LOCAL_ADDR: Address = Address::new(0xfe80, 0, 0, 0, 0, 0, 0, 1);
+     const UNIQUE_LOCAL_ADDR: Address = Address::new(0xfd00, 0, 0, 201, 1, 1, 1, 1);
+diff --git a/src/wire/mod.rs b/src/wire/mod.rs
+index 64ac653..e6c2fd8 100644
+--- a/src/wire/mod.rs
++++ b/src/wire/mod.rs
+@@ -80,9 +80,9 @@ pub mod pretty_print;
+ #[cfg(all(feature = "proto-ipv4", feature = "medium-ethernet"))]
+ mod arp;
+ #[cfg(feature = "proto-dhcpv4")]
+-pub(crate) mod dhcpv4;
++pub mod dhcpv4;
+ #[cfg(feature = "proto-dns")]
+-pub(crate) mod dns;
++pub mod dns;
+ #[cfg(feature = "medium-ethernet")]
+ mod ethernet;
+ #[cfg(any(feature = "proto-ipv4", feature = "proto-ipv6"))]
+@@ -95,11 +95,11 @@ mod icmpv6;
+ pub mod ieee802154;
+ #[cfg(feature = "proto-ipv4")]
+ mod igmp;
+-pub(crate) mod ip;
++pub mod ip;
+ #[cfg(feature = "proto-ipv4")]
+-pub(crate) mod ipv4;
++pub mod ipv4;
+ #[cfg(feature = "proto-ipv6")]
+-pub(crate) mod ipv6;
++pub mod ipv6;
+ #[cfg(feature = "proto-ipv6")]
+ mod ipv6ext_header;
+ #[cfg(feature = "proto-ipv6")]
+@@ -191,7 +191,7 @@ pub use self::ipv4::{
+ };
+ 
+ #[cfg(feature = "proto-ipv6")]
+-pub(crate) use self::ipv6::MulticastScope as Ipv6MulticastScope;
++pub use self::ipv6::MulticastScope as Ipv6MulticastScope;
+ #[cfg(feature = "proto-ipv6")]
+ pub use self::ipv6::{
+     Address as Ipv6Address, Cidr as Ipv6Cidr, Packet as Ipv6Packet, Repr as Ipv6Repr,
+@@ -389,7 +389,7 @@ impl HardwareAddress {
+     }
+ 
+     #[cfg(feature = "medium-ethernet")]
+-    pub(crate) fn ethernet_or_panic(&self) -> EthernetAddress {
++    pub fn ethernet_or_panic(&self) -> EthernetAddress {
+         match self {
+             HardwareAddress::Ethernet(addr) => *addr,
+             #[allow(unreachable_patterns)]
+@@ -398,7 +398,7 @@ impl HardwareAddress {
+     }
+ 
+     #[cfg(feature = "medium-ieee802154")]
+-    pub(crate) fn ieee802154_or_panic(&self) -> Ieee802154Address {
++    pub fn ieee802154_or_panic(&self) -> Ieee802154Address {
+         match self {
+             HardwareAddress::Ieee802154(addr) => *addr,
+             #[allow(unreachable_patterns)]
+@@ -407,7 +407,7 @@ impl HardwareAddress {
+     }
+ 
+     #[inline]
+-    pub(crate) fn medium(&self) -> Medium {
++    pub fn medium(&self) -> Medium {
+         match self {
+             #[cfg(feature = "medium-ip")]
+             HardwareAddress::Ip => Medium::Ip,
+diff --git a/src/wire/sixlowpan/frag.rs b/src/wire/sixlowpan/frag.rs
+index eed7f05..4eaf9b2 100644
+--- a/src/wire/sixlowpan/frag.rs
++++ b/src/wire/sixlowpan/frag.rs
+@@ -11,10 +11,10 @@ use byteorder::{ByteOrder, NetworkEndian};
+ #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+ #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+ pub struct Key {
+-    pub(crate) ll_src_addr: Ieee802154Address,
+-    pub(crate) ll_dst_addr: Ieee802154Address,
+-    pub(crate) datagram_size: u16,
+-    pub(crate) datagram_tag: u16,
++    pub ll_src_addr: Ieee802154Address,
++    pub ll_dst_addr: Ieee802154Address,
++    pub datagram_size: u16,
++    pub datagram_tag: u16,
+ }
+ 
+ /// A read/write wrapper around a 6LoWPAN Fragment header.
+diff --git a/src/wire/sixlowpan/nhc.rs b/src/wire/sixlowpan/nhc.rs
+index 85e422a..b9574f1 100644
+--- a/src/wire/sixlowpan/nhc.rs
++++ b/src/wire/sixlowpan/nhc.rs
+@@ -591,7 +591,7 @@ impl<T: AsRef<[u8]>> UdpNhcPacket<T> {
+     }
+ 
+     // Return the size of the checksum field.
+-    pub(crate) fn checksum_size(&self) -> usize {
++    pub fn checksum_size(&self) -> usize {
+         match self.checksum_field() {
+             0b0 => 2,
+             0b1 => 0,
+@@ -600,7 +600,7 @@ impl<T: AsRef<[u8]>> UdpNhcPacket<T> {
+     }
+ 
+     /// Returns the total size of both port numbers.
+-    pub(crate) fn ports_size(&self) -> usize {
++    pub fn ports_size(&self) -> usize {
+         match self.ports_field() {
+             0b00 => 4, // 16 bits + 16 bits
+             0b01 => 3, // 16 bits + 8 bits
+diff --git a/src/wire/udp.rs b/src/wire/udp.rs
+index d7ad0d4..2e65541 100644
+--- a/src/wire/udp.rs
++++ b/src/wire/udp.rs
+@@ -255,7 +255,7 @@ impl Repr {
+     /// This never calculates the checksum, and is intended for internal-use only,
+     /// not for packets that are going to be actually sent over the network. For
+     /// example, when decompressing 6lowpan.
+-    pub(crate) fn emit_header<T>(&self, packet: &mut Packet<&mut T>, payload_len: usize)
++    pub fn emit_header<T>(&self, packet: &mut Packet<&mut T>, payload_len: usize)
+     where
+         T: AsRef<[u8]> + AsMut<[u8]> + ?Sized,
+     {
+-- 
+2.47.0
+

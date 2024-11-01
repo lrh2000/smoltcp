@@ -1,0 +1,27 @@
+From e0bbaead96459e47dbc937e7dffac74ddf0790b8 Mon Sep 17 00:00:00 2001
+From: Ruihan Li <lrh2000@pku.edu.cn>
+Date: Tue, 24 Sep 2024 17:33:15 +0800
+Subject: [PATCH 3/4] Mark `InterfaceInner` fields as `pub`
+
+---
+ src/iface/interface/mod.rs | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/iface/interface/mod.rs b/src/iface/interface/mod.rs
+index 5962ba9..8e8b4f1 100644
+--- a/src/iface/interface/mod.rs
++++ b/src/iface/interface/mod.rs
+@@ -84,8 +84,8 @@ pub struct Interface {
+ /// methods on the `Interface` in this time (since its `device` field is borrowed
+ /// exclusively). However, it is still possible to call methods on its `inner` field.
+ pub struct InterfaceInner {
+-    caps: DeviceCapabilities,
+-    now: Instant,
++    pub caps: DeviceCapabilities,
++    pub now: Instant,
+     rand: Rand,
+ 
+     #[cfg(any(feature = "medium-ethernet", feature = "medium-ieee802154"))]
+-- 
+2.47.0
+
